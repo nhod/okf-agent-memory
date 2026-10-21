@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -495,5 +496,37 @@ func TestCmdRestore_MinScoreGate(t *testing.T) {
 	}
 	if !strings.Contains(stdoutBuf.String(), "Successfully restored acme/gated-rules") {
 		t.Errorf("expected success message, got: %s", stdoutBuf.String())
+	}
+}
+
+func TestCmdRestore_EmptyLock(t *testing.T) {
+	workDir := t.TempDir()
+	origDir, _ := os.Getwd()
+	if err := os.Chdir(workDir); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(origDir) }()
+
+	// Create empty okf.lock file
+	lf := &lock.Lockfile{Version: 1}
+	if err := lock.WriteLockfile("okf.lock", lf); err != nil {
+		t.Fatal(err)
+	}
+
+	restoreCmd, ok := FindCommand("restore")
+	if !ok {
+		t.Fatalf("restore command not found")
+	}
+
+	var logBuf bytes.Buffer
+	origLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logBuf, nil)))
+	defer slog.SetDefault(origLogger)
+
+	restoreCmd.Run([]string{})
+
+	output := logBuf.String()
+	if !strings.Contains(output, "No vendor bundles specified in okf.lock.") {
+		t.Errorf("expected 'No vendor bundles specified in okf.lock.' in log output, got: %q", output)
 	}
 }

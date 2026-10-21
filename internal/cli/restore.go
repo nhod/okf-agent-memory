@@ -3,6 +3,7 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,7 +70,7 @@ func runRestore(registryURL string, force bool, minScores ...int) {
 	}
 
 	if lf == nil || len(lf.Bundles) == 0 {
-		fmt.Println("No vendor bundles specified in okf.lock.")
+		slog.Info("No vendor bundles specified in okf.lock.")
 		return
 	}
 
